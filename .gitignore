@@ -1,0 +1,6 @@
+﻿**/.idea/*
+**/bin/*
+**/obj/*
+**/appsettings.Production.json/**
+appsettings.Production.json
+logs/
