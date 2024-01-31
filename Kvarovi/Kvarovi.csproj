@@ -9,6 +9,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Bogus" Version="35.3.0" />
+        <PackageReference Include="Community.Expo.Server.SDK" Version="1.2.1.1" />
         <PackageReference Include="Cyrillic.Convert" Version="2.2.1" />
         <PackageReference Include="EntityFrameworkCore.NamingConventions" Version="8.0.0" />
         <PackageReference Include="HtmlAgilityPack" Version="1.11.57" />
@@ -33,6 +35,11 @@
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Middleware\" />
+      <Folder Include="Migrations\" />
     </ItemGroup>
 
 </Project>

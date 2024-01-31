@@ -10,6 +10,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
  public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.HasKey(u => u.UserId);
-        builder.HasIndex(u => u.DeviceToken).IsUnique(); 
-        builder.HasMany(u => u.Keywords).WithMany(k => k.Users);
+        builder.HasIndex(u => u.DeviceToken).IsUnique();
+        builder.HasMany(u => u.Keywords).WithMany(k => k.Users)
+            .UsingEntity<KeywordUser>();
+        builder.HasMany(u => u.Announcements).WithMany(a => a.Users);
     }}

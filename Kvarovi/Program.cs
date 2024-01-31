@@ -1,54 +1,16 @@
 using System.Net.Http.Headers;
+using System.Net.Mime;
 using HtmlAgilityPack;
 using Cyrillic.Convert;
+using Kvarovi.AnnouncementGetters;
 using Kvarovi.Contexts;
+using Kvarovi.Repository;
+using Kvarovi.Services.AnnouoncementUpdate;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
 
-/*
- www.bvk.rs/planirani-radovi & www.bvks.rs/kvarovi-na-mrezi
------------------------------------------------------------
-p.toggler -> title data
-div.toggle_content ->  text data
-
-
-https://elektrodistribucija.rs/planirana-iskljucenja-beograd/Dan_0_Iskljucenja.htm
-(ide od dan 0-3)
-----------------------------------------------------------------------------------
-table -> tr sa 3 td (opstina,vreme,ulice)
-znaci pretrazujes po tr preskocis 1.
-
-*/
-
-// string vodaplan = "https://www.bvk.rs/planirani-radovi";
-// string vodakvar = "https://www.bvks.rs/kvarovi-na-mrezi";
-// string elektro = "https://elektrodistribucija.rs/planirana-iskljucenja-beograd/Dan_0_Iskljucenja.htm";
-// HttpClient client = new();
-// client.DefaultRequestHeaders.Accept.Clear();
-// client.DefaultRequestHeaders.Accept.Add( new MediaTypeWithQualityHeaderValue("text/html"));
-//
-// async Task<string> getPage(string uri)
-// {
-//  var resp = await client.GetAsync(uri);
-//  return await resp.Content.ReadAsStringAsync();
-// }
-//
-// var html = new HtmlDocument();
-// html.LoadHtml(await getPage(vodaplan));
-//
-// var titles = html.DocumentNode.SelectNodes("//p[contains(@class, 'toggler')]");
-// var texts = html.DocumentNode.SelectNodes("//div[contains(@class, 'toggle_content')]");
-// foreach (var htmlNode in titles)
-// {
-//  Console.WriteLine(htmlNode.InnerText.ToSerbianLatin());
-// }
-//
-// foreach (var htmlNode in texts)
-// {
-//  Console.WriteLine(htmlNode.InnerText.ToSerbianLatin());
-// }
 
 
 
@@ -59,6 +21,7 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command",LogEventLevel.Warning)
     .CreateLogger();
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://*:5050");
 builder.Configuration.AddEnvironmentVariables();
 builder.Host.UseSerilog();
 
@@ -72,6 +35,8 @@ builder.Services.AddDbContext<MySqlContext>(optionsBuilder =>
 });
 
 
+builder.Services.AddScoped<IAnnouncementRepository,AnnouncementRepository>() ;
+builder.Services.AddHostedService<ExpoReceiptChecker>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
@@ -88,6 +53,7 @@ builder.Services.AddCors(options =>
         });
 });
 
+
 builder.Services.AddControllers(options =>
 {
     options.ReturnHttpNotAcceptable = true;
@@ -99,6 +65,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
 
 app.UseForwardedHeaders();
 app.UseCors();

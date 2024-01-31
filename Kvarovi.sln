@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kvarovi", "Kvarovi\Kvarovi.csproj", "{0B4638B8-E4E3-4E95-8132-D562FB87CC65}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kvarovi.Tests", "Kvarovi.Tests\Kvarovi.Tests.csproj", "{C7833919-5ED9-45F0-88FC-AD7F739941F1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{0B4638B8-E4E3-4E95-8132-D562FB87CC65}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0B4638B8-E4E3-4E95-8132-D562FB87CC65}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0B4638B8-E4E3-4E95-8132-D562FB87CC65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7833919-5ED9-45F0-88FC-AD7F739941F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7833919-5ED9-45F0-88FC-AD7F739941F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7833919-5ED9-45F0-88FC-AD7F739941F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7833919-5ED9-45F0-88FC-AD7F739941F1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
