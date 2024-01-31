@@ -2,5 +2,10 @@
 **/bin/*
 **/obj/*
 **/appsettings.Production.json/**
+**/appsettings.Development.json/**
+**/*.apk/**
+**/*.zip/**
+**/eas.json/**
+**/google-services.json/**
 appsettings.Production.json
 logs/
