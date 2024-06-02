@@ -11,9 +11,14 @@ public class Fakes
     static Random r = new();
     static int chance = 33;
     static Faker faker = new Faker(locale: "hr");
+    static int counter = 0;
 
 
-
+    /// <summary>
+    /// Generates text such that it includes random shared words
+    /// </summary>
+    /// <param name="sharedWordCount"></param>
+    /// <returns></returns>
     public static string generateText(int sharedWordCount)
     {
         string text = faker.Random.Words(100);
@@ -30,9 +35,8 @@ public class Fakes
     static string getRandomOrShared()
     {
 
-        if (r.Next(100) < chance)
-            return shared.Count == 0 ? faker.Random.Word() : faker.PickRandom<string>(shared);
-        else return faker.Random.Word();
+        
+         return faker.Random.Word() + counter++;
 
     }
     
@@ -47,7 +51,7 @@ public class Fakes
             RuleFor(k => k.Word, f =>
             {
                 var word = "";
-                if (r.Next(100) < chance) word = getRandomOrShared();
+                word = getRandomOrShared();
                 toShare.Add(word);
                 return word;
             });

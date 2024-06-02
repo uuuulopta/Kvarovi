@@ -1,55 +1,63 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useContext, useMemo } from 'react';
 import { Text, View, Dimensions,Image, Platform, StyleSheet, LayoutAnimation } from 'react-native';
 import { figmaToDeviceRatio } from './Utils';
 import { useFonts,Dosis_700Bold } from '@expo-google-fonts/dosis';
 import BluePeople from '../assets/plaviLjudi';
-import { globals } from './globals';
-import { FAB, List } from 'react-native-paper';
+import { SelectedChipContext, UserContext, globals, keywordChip } from './globals';
+import { FAB, List, Provider } from 'react-native-paper';
 import OrangePeople from '../assets/vodovodLjudi';
 import { Dongle_700Bold } from '@expo-google-fonts/dongle';
 import { keyword } from './globals';
 import ParsedText from 'react-native-parsed-text';
+import { ScrollView } from 'react-native';
 
 export interface kvarAccordionProps{
   date: string,
   title: string,
   titleShort: string,
   text: string,
-  id: string,
+  id: string | number,
   expanded: boolean,
-  returnKeywords: () => keyword[]
 
 }
 
 
-export function KvaroviAccordion(props: kvarAccordionProps){
+
+
+export function KvaroviAccordion(props: {accordionProps:  kvarAccordionProps,selectedKeywords }){
 
   
-  useEffect(() => {},[props.expanded])
+
+
+
+  const {keywords,setKeywords} = useContext(UserContext).keywordState;
+  
+
   return <List.Accordion 
-    
-    
-    style={[ styles.kvarStyle,props.expanded ? {borderBottomLeftRadius:0,borderBottomRightRadius:0} : {} ]}
+       
+    style={[ styles.kvarStyle,props.accordionProps.expanded ? {borderBottomLeftRadius:0,borderBottomRightRadius:0} : {} ]}
     theme={{ colors: {background:globals.background} }}
-    title={props.titleShort } 
-    left={() => <DateHeader date={props.date}/>}
+    title={props.accordionProps.titleShort } 
+    left={() => <DateHeader date={props.accordionProps.date}/>}
     titleStyle={{fontFamily:"Dosis_700Bold",fontSize:20}}
-    id={props.id}
-    key={props.id}
-    expanded={props.expanded}
+    id={props.accordionProps.id}
+    key={props.accordionProps.id}
+    expanded={props.accordionProps.expanded}
     
     
     
   > 
-    <View style={[ styles.kvarStyle,styles.accordionTextWrapper]}>
+    <View style={[ styles.accordionTextWrapper]}>
 
-      <Text style={[styles.accordionText,{fontFamily:"Dosis_600SemiBold",fontSize:20,}]}>{"Neki dugackiiiiiiii naslov"}</Text>
+      <ScrollView >
+      <Text style={[{fontFamily:"Dosis_600SemiBold",fontSize:20,marginBottom:10,}]}>{props.accordionProps.title}</Text>
       <ParsedText
         style={[styles.accordionText,{lineHeight:20}]}
         parse= { [
-          {pattern: new RegExp(props.returnKeywords().map(kw =>kw.word).join("|"),"gmi" ),onTextLayout: (e) => {console.log(`Matched!`)}, style: {color:"red"},  }
+          {pattern: new RegExp(keywords.map(kw =>kw.word).join("|"),"gmi" ), style: {color:"red"} }
         ] }
-      >{props.text}</ParsedText>
+      >{props.accordionProps.text}</ParsedText>
+      </ScrollView>
     </View>
   </List.Accordion>
 }
@@ -67,7 +75,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "white",
     width: figmaToDeviceRatio(331,'x'),
-    height: figmaToDeviceRatio(39,'y'),
+    height: "auto",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",  
@@ -75,19 +83,20 @@ const styles = StyleSheet.create({
   },
 
   accordionTextWrapper: {
-    
-    height: "auto",
+
+    borderRadius: 12,
+    backgroundColor: "white",
+    width: figmaToDeviceRatio(331,'x'),
+    maxHeight: figmaToDeviceRatio(300,'y'),
+    display: "flex",
+    marginTop: 0,
     fontFamily:"Dosis_500Medium",
-    marginTop:0,
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
+    paddingBottom: 10,
   },
   accordionText:{
-
     fontSize:16,
-    width: figmaToDeviceRatio(331,'x'),
-    marginRight: figmaToDeviceRatio(33,'x'),
-    padding:5
   },
   kvarStyleItem: {
     borderBottomRightRadius: 12,
@@ -102,7 +111,6 @@ const styles = StyleSheet.create({
   },
   dateHeader: {
     width: figmaToDeviceRatio(88,'x'),
-    height: figmaToDeviceRatio(33,'y'),
     backgroundColor: globals.blue,
     borderRadius: 12,
     display: "flex",

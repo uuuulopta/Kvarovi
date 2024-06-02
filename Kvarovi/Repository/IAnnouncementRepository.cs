@@ -9,9 +9,16 @@ public interface IAnnouncementRepository
     public Task<Announcement?> getAnnouncementByTitle(string title);
     public Task<Announcement?> getRootAnnouncement(string title);
     public Task<Announcement?> getAnnouncementByHash(Int32 hash);
-    
-    public Task<List<User>> getUsersByTheirKeywordsInText(string text);
+
+    public Task<IEnumerable<Announcement>> GetAnnouncementsByUserId(int userId);
+
+    public Task<IEnumerable<ClientData>> GetAppDataForUser(int userId);
+
+    public Task<List<User>> getUsersByTheirKeywordsInTextOrAnnouncementKeywords(string text,
+        IEnumerable<string> announcementKeywords);
     public Task<Keyword?> getKeywordByWord(string word);
+    public Task<IEnumerable<Keyword>> GetKeywordsByWords(IEnumerable<string> words);
+    public Task<IEnumerable<Keyword>> getKeywordsByUserIdAsync(int userId);
     public Task addAnnouncement(Announcement a);
     public Task setUserAsNotifiedForAnnouncement(User u, Announcement a);
     public Task setUsersAsNotifiedForAnnouncement(IEnumerable<User> u, Announcement a);
@@ -19,8 +26,9 @@ public interface IAnnouncementRepository
     public Task<List<User>> getUsersNotNotified(Announcement a);
     
     public Task deleteDeviceByToken(string token);
-    public Task registerUser(string token);
-    public Task EditKeywordsForUser(string token, IEnumerable<string> keywords);
+    public Task<bool> registerUser(string token,string key);
+    public Task EditKeywordsForUser(int userId, IEnumerable<string> keywords);
+    public Task AddMissingKeywordRange(List<string> keywords);
     public void UpdateEntity<T>(T Entity);
     public Task saveChangesAsync();
     public void clearTracker();
@@ -30,6 +38,8 @@ public interface IAnnouncementRepository
     public void attachEntity<T>(T entity);
     public void attachEntityRange(params object[] entities);
     public void deattachEntity<T>(T entity);
+    
+    
 
 
 }

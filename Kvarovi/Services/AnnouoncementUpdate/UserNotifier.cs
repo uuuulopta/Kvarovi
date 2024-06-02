@@ -4,35 +4,35 @@ using EntityConfigs;
 using ExpoCommunityNotificationServer.Client;
 using ExpoCommunityNotificationServer.Models;
 using Entities;
+using Microsoft.Extensions.Caching.Memory;
 using Repository;
 using Utils;
 
 public class UserNotifier
 {
     readonly IAnnouncementRepository _repository;
-    readonly ILogger<Updater> _logger;
+    readonly ILogger<UserNotifier> _logger;
     List<string> _userTokens = new();
     static string _accessToken = WebApplication.CreateBuilder().Configuration.GetSection("expo")["accessToken"] 
                                  ?? throw new Exception("Missing expo access token in appsettings.json or environment.");
     static IPushApiClient _client = new PushApiClient(token:_accessToken,settings:null);
     public static readonly object monitor = new object();
-    IServiceProvider _provider;
+    public static IMemoryCache TicketExpoTokenCache = new MemoryCache(new MemoryCacheOptions(){SizeLimit = 10000});
     Announcement _announcement;
-    public UserNotifier(IServiceProvider provider,Announcement announcement)
+    public UserNotifier(IAnnouncementRepository repository, ILogger<UserNotifier> logger,Announcement announcement)
+    
     {
-        this._provider = provider;
-        var scope = provider.CreateScope();
-        this._repository = scope.ServiceProvider.GetRequiredService<IAnnouncementRepository>();
-        _logger = scope.ServiceProvider.GetRequiredService<ILogger<Updater>>();
-        _announcement = announcement ?? throw new NullReferenceException();
-
+        _repository = repository;
+        _logger = logger;
+        _announcement = announcement;
     }
-    public async Task sendUserNotificationsForAnnouncement()
+
+    public async Task sendUserNotificationsForAnnouncement(bool updateFlag)
     {
         
         _repository.attachEntityRange(_announcement.Users.Cast<object>().ToArray());
         IEnumerable<User> users; 
-        if (!_announcement.Update)
+        if (!updateFlag)
         {
             users = _announcement.Users;
             _logger.LogInformation($"Announcement {_announcement.Title} is not an update");
@@ -44,10 +44,10 @@ public class UserNotifier
         else
         {
             _logger.LogInformation($"Announcement {_announcement.Title} is an update / same");
-            
             var sameAnnouncement = await _repository.getAnnouncementByTitle(_announcement.Title);
             if (sameAnnouncement == null) throw new Exception("Failed to find root announcement");
             sameAnnouncement.Users = _announcement.Users;
+            sameAnnouncement.Text = _announcement.Text;
             await _repository.saveChangesAsync();
             _announcement = sameAnnouncement;
             users = await _repository.getUsersNotNotified(_announcement);
@@ -66,6 +66,7 @@ public class UserNotifier
 
     public async Task sendNotifications()
     {
+        List<string> tokensSent = new();
         List<Task<PushTicketResponse>> tasks = new(); 
         lock(monitor)
         {
@@ -81,24 +82,40 @@ public class UserNotifier
 
                 // Expo will also get mad if we send more than 100 tickets in one request, so we do 50 to be safe.
                 var deviceTokens = get50orLessUserTokens();
+                tokensSent.AddRange(deviceTokens);
                 var ticket = createPushTicket(deviceTokens);
 
                 // Exponential backoff if the tickets fail to be sent
                 tasks.Add(Retry.DoAsync<PushTicketResponse>( () => _client.SendPushAsync(ticket), _ => true));
-                
                 notificationsSent += deviceTokens.Count;
             }
         }
 
         var res = (await Task.WhenAll(tasks));
+        
         foreach (var pushTicketResponse in res)
         {
-            var errored = pushTicketResponse.PushTicketStatuses.Where(t => t.TicketStatus == "error").ToList();
+
+            var deviceTokens = tokensSent.Take(pushTicketResponse.PushTicketStatuses.Count).ToList();
+            tokensSent = tokensSent.Skip(pushTicketResponse.PushTicketStatuses.Count).ToList();
+            List<PushTicketStatus> errored = new();
+            for (int i = 0; i < pushTicketResponse.PushTicketStatuses.Count; i++)
+            {
+                if(pushTicketResponse.PushTicketStatuses[i].TicketStatus == "error")
+                { 
+                    errored.Add(pushTicketResponse.PushTicketStatuses[i]);
+                    continue;
+                }
+                TicketExpoTokenCache.Set(pushTicketResponse.PushTicketStatuses[i].TicketId, deviceTokens[i],
+                    new MemoryCacheEntryOptions(){Size = 1,AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)});
+            }
+            
             foreach (var ticket in errored)
             {
                 if (ticket.Details.Error == "DeviceNotRegistered")
                 {
-                    var token = ExpoReceiptChecker.GetTokenFromMessage(ticket.TicketMessage);
+                    
+                    var token = GetTokenFromPushTicketMessage(ticket.TicketMessage);
                     await _repository.deleteDeviceByToken(token);
                     await _repository.saveChangesAsync();
                     _logger.LogInformation($"DeviceNotRegistered TICKET, deleted: {token} ");
@@ -130,5 +147,9 @@ public class UserNotifier
         res.AddRange(_userTokens.Take(50));
         _userTokens = _userTokens.Skip(res.Count).ToList();
         return res;
+    }
+    public static string GetTokenFromPushTicketMessage(string msg)
+    {
+        return msg.Split("\"")[1];
     }
 }

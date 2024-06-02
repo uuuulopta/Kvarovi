@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 public class Announcement
 {
-    public int AnnouncementId; 
+    public int? AnnouncementId; 
     public AnnouncementType AnnouncementType { get; set; } = null!;
     
     public int AnnouncementTypeId { get; set; }
@@ -13,10 +13,11 @@ public class Announcement
     public DateTime? Date { get; set; }
     public Int32 Hash { get; set; }
     
-    public bool Update { get; set; }
     [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
     [Column(TypeName = "TIMESTAMP")] 
     public DateTime Timestamp { get; set; }
 
     public List<User> Users { get; set; } = new List<User>();
+    
+    public List<Keyword> Keywords { get; set; } = new();
 }

@@ -1,20 +1,40 @@
 ﻿namespace Kvarovi.Utils;
 
-public static class Retry
+using Microsoft.Extensions.Logging.Abstractions;
+
+public class Retry
 {
-    public static async Task<T> DoAsync<T>(Func<Task<T>> action,
-        Func<T, bool> validateResult = null,
-        int maxRetries = 10, int maxDelayMilliseconds = 2000, int delayMilliseconds = 200)
+    
+    
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="action"></param>
+    /// <param name="validateResult"></param>
+    /// <param name="maxRetries"></param>
+    /// <param name="maxDelayMilliseconds"></param>
+    /// <param name="delayMilliseconds"></param>
+    /// <param name="onEachFail"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    /// <exception cref="AggregateException"></exception>
+    public static async Task<T> DoAsync<T>(Func<Task<T>> action, Func<T, bool> validateResult = null,
+        int maxRetries = 10, int maxDelayMilliseconds = 2000, int delayMilliseconds = 200,
+        Action<int,Exception>? onEachFail = null
+)
 
     {
         var backoff = new ExponentialBackoff(delayMilliseconds, maxDelayMilliseconds);
 
         var exceptions = new List<Exception>();
 
+        int retryCount = 0;
         for (var retry = 0; retry < maxRetries; retry++)
         {
             try
             {
+                retryCount = retry;
                 var result = await action()
                     .ConfigureAwait(false);
                 var isValid = validateResult?.Invoke(result);
@@ -23,6 +43,7 @@ public static class Retry
             }
             catch (Exception ex)
             {
+                onEachFail?.Invoke(retryCount,ex);
                 exceptions.Add(ex);
                 await backoff.Delay()
                     .ConfigureAwait(false);

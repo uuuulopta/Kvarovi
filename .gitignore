@@ -5,6 +5,8 @@
 *appsettings.Development.json
 *.apk
 *.zip
+*.bak
 *eas.json
 *google-services.json
+*.DotSettings.*
 logs/

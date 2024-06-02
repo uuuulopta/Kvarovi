@@ -1,10 +1,41 @@
-import React from "react";
+import React, { createContext, useContext } from "react";
 import { StyleSheet } from "react-native";
 import {BottomNavigationProps, Text} from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { figmaToDeviceRatio } from "./Utils";
 
+export interface announcementData{
+
+  id: number,
+  title: string,
+  text: string,
+  date: string,
+  workType: string,
+  announcementType: string
+  
+}
+interface UserContextValue{
+  keywordState:{
+    keywords: keyword[],
+    setKeywords: any
+  }
+  announcementState:{
+    announcements: announcementData[],
+    setAnnouncements: any
+  }
+}
+
+
+export interface keywordChip extends keyword{
+  selected: boolean
+}
+
+const v: UserContextValue ={keywordState:{  keywords: [],setKeywords: () => {}},announcementState:{  announcements: [],setAnnouncements: () => {}  }}
+export const UserContext = createContext(v)
+
+const c: keywordChip[] = [];
+export const SelectedChipContext = createContext(c);
 export const globals = {
   blue: "#003F7D",
   blueD1: "#003366",
@@ -13,7 +44,8 @@ export const globals = {
   orangeL1: "#FF8E00",
   background: "#DFE7EE",
   screenOptions: (props: any) => ({
-          safeAreaInsets: {top:0},
+          headerShown: false,
+          headerMode: 'none',
           tabBarIcon: ({ focused, color, size }) => {
             let iconName;
 
@@ -32,10 +64,6 @@ export const globals = {
           },
           tabBarActiveTintColor: '#FD7702',
           tabBarInactiveTintColor: 'white',
-          header: () => {
-            //return <SafeAreaView style={{backgroundColor:globals.background}}/>
-            return <SafeAreaView style={{backgroundColor:globals.background}}/>
-              },
           tabBarLabel: ({focused}) => {
             switch (props.route.name){
                 case "Home":

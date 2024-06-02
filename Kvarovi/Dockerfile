@@ -17,4 +17,5 @@ RUN dotnet publish "Kvarovi.csproj" -c Release -o /app/publish /p:UseAppHost=fal
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Kvarovi.dll"]
+RUN touch output
+ENTRYPOINT ["dotnet", "Kvarovi.dll",">>","output"]

@@ -14,4 +14,5 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasMany(u => u.Keywords).WithMany(k => k.Users)
             .UsingEntity<KeywordUser>();
         builder.HasMany(u => u.Announcements).WithMany(a => a.Users);
+        builder.HasMany(u => u.ApiKeys).WithOne(apk => apk.User);
     }}

@@ -1,64 +1,89 @@
-﻿namespace gspAPI.Controllers;
+﻿namespace Kvarovi.Controllers;
 
-using Kvarovi.AnnouncementGetters;
-using Kvarovi.Entities;
-using Kvarovi.EntityConfigs;
-using Kvarovi.Repository;
-using Kvarovi.Services.AnnouoncementUpdate;
-using Microsoft.AspNetCore.Http.HttpResults;
+using Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-
+using Microsoft.Extensions.Caching.Memory;
+using Middleware.ApiKeyAuthentication;
+using Models;
+using Repository;
+using Services;
 
 [ApiController]
+[Authorize(AuthenticationSchemes = ApiKeyAuthenticationOptions.DefaultScheme)]
 [Route("Kvarovi")]
 public class MainController : ControllerBase
 {
     readonly IAnnouncementRepository _announcementRepository;
     readonly ILogger<MainController> _logger;
     readonly IServiceProvider _services;
-
-    public MainController(IAnnouncementRepository announcementRepository,ILogger<MainController> logger,IServiceProvider services)
+    readonly IMemoryCache _memoryCache;
+    
+    public MainController(IAnnouncementRepository announcementRepository,ILogger<MainController> logger,
+        IServiceProvider services,ApiKeyUserMemoryCache memoryCache)
     {
         _services = services;
+        _memoryCache = memoryCache.Cache;
         _announcementRepository = announcementRepository;
         _logger = logger;
     }
-    [HttpGet("/test")]
-    public async Task<ActionResult> test()
-    {
-        var updater = new Updater(_services);
-        var data = AnnouncementGetterFactory.getAnnouncements(AnnouncementUrl.EpsAllDays);
-        await updater.Update(data,AnnouncementTypeEnum.eps);
-        return Ok();
-
-    }
-
     [HttpPost("/register")]
-    public async Task<ActionResult> register([FromForm]string token,[FromForm]string device)
+    [AllowAnonymous]
+    public async Task<ActionResult<string>> register( RegisterData data)
     {
+
+        var device = data.device;
+        var token = data.token;
+        _logger.LogInformation($"Register: token: {token} device: {device}");
+        
         if (device == "android")
         {
             if (!token.Contains("ExponentPushToken[") || token.Last() != ']') return BadRequest("Wrong token format for android.");
-            await _announcementRepository.registerUser(token);
+            var key = new ApiKeyService().GenerateApiKey();
+            
+            await _announcementRepository.registerUser(token, key);
             await _announcementRepository.saveChangesAsync();
-            return Ok();
+            
+            return Ok(key);
         }
-        else return UnprocessableEntity("Unknown device.");
+
+        return UnprocessableEntity("Unknown device.");
     }
 
     [HttpPost("/editKeywords")]
-    public async Task<ActionResult> editKeywords([FromForm]string token, [FromForm]string keywords)
+    public async Task<ActionResult> editKeywords([FromForm]string? keywords)
     {
-        var kws = keywords.Split(",");
+        List<string> kws;
+        if (keywords != null)
+        {
+            kws = keywords.Split(",").ToList();
+            kws = kws.Select(kw => kw.Trim().ToLower()).ToList();
+    
+        }
+        else kws = new List<string>();
+        _logger.LogInformation($"Received keywords: {keywords} Split: {string.Join(',',kws)}");
         var parsed = kws.Where(k => String.IsNullOrEmpty(k) == false).ToList();
-        if (parsed.Count == 0) return BadRequest("Count of keywords is 0");
         if (parsed.Count > 20) return BadRequest("You can't have more than 20 keywords.");
         if (parsed.Any(k => k.Length > 100)) return BadRequest("Keyword is too long");
-        await _announcementRepository.EditKeywordsForUser(token,parsed);
+        await _announcementRepository.EditKeywordsForUser(int.Parse(User.Claims.FirstOrDefault()!.Value),parsed);
         await _announcementRepository.saveChangesAsync();
         return Ok();
     }
+
+    [HttpGet("/getData")]
+    public async Task<ActionResult<IEnumerable<ClientData>>> getData()
+    {
+        var res = await _announcementRepository.GetAppDataForUser(int.Parse(User.Claims.FirstOrDefault()!.Value));
+        if (!res.Any()) return Ok(new List<ClientData>());
+        return Ok(res);
+    }
+    [HttpGet("/getKeywords")]
+    public async Task<ActionResult<IEnumerable<ClientData>>> getKeywords()
+    {
+        var res = await _announcementRepository.getKeywordsByUserIdAsync(int.Parse(User.Claims.FirstOrDefault()!.Value));
+        return Ok(res.Select(k => new {id=k.KeywordId,word=k.Word}));
+    }
+    
 
   
 }

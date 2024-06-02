@@ -14,5 +14,6 @@ public class AnnouncementConfiguration : IEntityTypeConfiguration<Announcement>
         builder.Property(a => a.Title).IsRequired();
         // builder.Property(a => a.Timestamp).IsRowVersion();                  
         builder.HasOne(a => a.AnnouncementType);
+        builder.HasMany(a => a.Keywords).WithMany(k => k.Announcements);
     }
 }

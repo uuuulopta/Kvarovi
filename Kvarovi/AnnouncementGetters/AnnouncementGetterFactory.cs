@@ -1,16 +1,20 @@
 ﻿namespace Kvarovi.AnnouncementGetters;
 
 using EntityConfigs;
+using Models;
 
-public class AnnouncementGetterFactory
+public class AnnouncementGetterFactory(ILoggerFactory loggerFactory)
 {
-   
-   public static Task<Dictionary<string, List<string>>> getAnnouncements(AnnouncementUrl url)
+
+
+    ILoggerFactory _loggerFactory = loggerFactory ?? throw new NullReferenceException();
+
+    public  Task<AnnouncementData> getAnnouncements(AnnouncementUrl url)
    {
        
        if (url.ToString() == AnnouncementUrl.vodovodplanned.ToString() || url.ToString() == AnnouncementUrl.vodovodkvar.ToString())
        {
-           return new WaterAnnouncementGetter().getAnnouncements(url);
+           return new WaterAnnouncementGetter(_loggerFactory.CreateLogger<WaterAnnouncementGetter>()).getAnnouncements(url);
        }
 
        List<string> epsurls = new() {
@@ -22,20 +26,20 @@ public class AnnouncementGetterFactory
        };
        if(epsurls.Contains(url.ToString()))
        {
-           return new ElectricityAnnouncementGetter().getAnnouncements(url);
+           return new ElectricityAnnouncementGetter(_loggerFactory.CreateLogger<ElectricityAnnouncementGetter>()).getAnnouncements(url);
        }
        throw new ArgumentException("Such AnnouncementUrl doesn't exist");
    }
-    public static AnnouncementGetter getAnnouncementGetter(AnnouncementTypeEnum ate)
+    public AnnouncementGetter getAnnouncementGetter(AnnouncementTypeEnum ate)
       {
           if (ate == AnnouncementTypeEnum.vodovod)
           {
-              return new WaterAnnouncementGetter();
+              return new WaterAnnouncementGetter(_loggerFactory.CreateLogger<WaterAnnouncementGetter>());
           }
           
           if (ate == AnnouncementTypeEnum.eps)
           {
-              return new ElectricityAnnouncementGetter();
+              return new ElectricityAnnouncementGetter(_loggerFactory.CreateLogger<ElectricityAnnouncementGetter>());
           }
 
           throw new NotImplementedException();

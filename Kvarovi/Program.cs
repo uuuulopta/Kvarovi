@@ -4,10 +4,14 @@ using HtmlAgilityPack;
 using Cyrillic.Convert;
 using Kvarovi.AnnouncementGetters;
 using Kvarovi.Contexts;
+using Kvarovi.Middleware.ApiKeyAuthentication;
 using Kvarovi.Repository;
+using Kvarovi.Services;
 using Kvarovi.Services.AnnouoncementUpdate;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
 
@@ -36,7 +40,11 @@ builder.Services.AddDbContext<MySqlContext>(optionsBuilder =>
 
 
 builder.Services.AddScoped<IAnnouncementRepository,AnnouncementRepository>() ;
+builder.Services.AddScoped<IUserRepository,UserRepository>() ;
+builder.Services.AddScoped<UserNotifierFactory>() ;
+builder.Services.AddSingleton<AnnouncementGetterFactory>();
 builder.Services.AddHostedService<ExpoReceiptChecker>();
+builder.Services.AddHostedService<AnnouncementUpdateService>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
@@ -59,23 +67,59 @@ builder.Services.AddControllers(options =>
     options.ReturnHttpNotAcceptable = true;
 }).AddNewtonsoftJson();
 
-// Add services to the container.
+ //Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(
+    setup =>
+    {
+        setup.AddSecurityDefinition(ApiKeyAuthenticationOptions.DefaultScheme, new OpenApiSecurityScheme
+        {
+            In = ParameterLocation.Header,
+            Name = ApiKeyAuthenticationOptions.HeaderName,
+            Type = SecuritySchemeType.ApiKey
+        });
 
+        setup.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = ApiKeyAuthenticationOptions.DefaultScheme
+                    }
+                }, 
+                Array.Empty<string>()
+            }
+        }); 
+    } 
+    );
+
+builder.Services.AddSingleton<ApiKeyUserMemoryCache>();
+builder.Services
+    .AddScoped<ICacheService, CacheService>()
+    .AddScoped<ApiKeyAuthenticationHandler>();
+
+builder.Services.AddAuthentication()
+    .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationOptions.DefaultScheme, null);
 var app = builder.Build();
 
 
-app.UseForwardedHeaders();
+
 app.UseCors();
+app.UseForwardedHeaders();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+
 app.MapControllers();
+
 
 
 app.Run();

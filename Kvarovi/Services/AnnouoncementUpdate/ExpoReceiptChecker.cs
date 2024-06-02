@@ -8,7 +8,7 @@ public class ExpoReceiptChecker: IHostedService
 {
 
     
-   readonly IServiceProvider _services;
+    readonly IServiceProvider _services;
     // so they don't get garbage collected
     // ReSharper disable once NotAccessedField.Local
     Timer? _timer;
@@ -46,12 +46,14 @@ public class ExpoReceiptChecker: IHostedService
         // https://docs.expo.dev/push-notifications/sending-notifications/
 
         var tickets = new List<(List<PushTicketStatus>, DateTime)>();
+        
         lock (monitor)
         {
             // tickets = _expoTickets.Where(t => DateTime.Now.Subtract(t.Item2).Minutes >= 15).ToList();
             // _expoTickets.RemoveAll(t => DateTime.Now.Subtract(t.Item2).Minutes >= 15);
             tickets = _expoTickets.ToList();
-
+            _expoTickets.Clear();
+            
         }
 
         _logger.LogInformation($"Getting reciepts for {tickets.Count} tickets");
@@ -59,7 +61,7 @@ public class ExpoReceiptChecker: IHostedService
         {
             var req = new PushReceiptRequest()
             {
-               PushTicketIds = tickets.Take(900).SelectMany(t => t.Item1.Select(i => i.TicketId)).ToList()
+                PushTicketIds = tickets.Take(900).SelectMany(t => t.Item1.Select(i => i.TicketId)).ToList()
             };
             
             tickets = tickets.Skip(900).ToList();
@@ -83,13 +85,28 @@ public class ExpoReceiptChecker: IHostedService
             _logger.LogInformation($"Validating receipt for {ticketId}");
             var ticketDeliveryStatus = keyValuePair.Value;
             _logger.LogInformation($"Status {ticketDeliveryStatus.DeliveryStatus}");
+            string expoToken = ""; 
+            if (UserNotifier.TicketExpoTokenCache.TryGetValue(ticketId,
+                    out var token))
+            {
+               expoToken = (string) token!;
+            }
             if (ticketDeliveryStatus.DeliveryStatus == "error")
             {
+                
                 if (ticketDeliveryStatus.Details.Error == "DeviceNotRegistered")
                 {
-                    var token = GetTokenFromMessage(ticketDeliveryStatus.DeliveryMessage);
-                    await _repository.deleteDeviceByToken(token);
-                    _logger.LogInformation($"DeviceNotRegistered error, deleting user: {token}");
+
+                    if (!string.IsNullOrEmpty(expoToken))
+                    {
+                        _logger.LogWarning($"DeviceNotRegistered for token {expoToken}, removing it..");
+                        await _repository.deleteDeviceByToken((string) token!);
+                        await _repository.saveChangesAsync();
+                    }
+                    else  _logger.LogError("DeviceNotRegistered: Unable to find ExpoPushToken for a given ExpoPushTicket");
+                    
+
+
                 }
 
                 if (ticketDeliveryStatus.Details.Error == "MessageRateExceeded")
@@ -101,7 +118,7 @@ public class ExpoReceiptChecker: IHostedService
                     
                     
             }
-                
+            UserNotifier.TicketExpoTokenCache.Remove(expoToken);
         }
 
         await _repository.saveChangesAsync();
@@ -120,11 +137,9 @@ public class ExpoReceiptChecker: IHostedService
 
         } 
     }
+    
 
-     public static string GetTokenFromMessage(string msg)
-     {
-         return msg.Split("\"")[1];
-     }
+    
     
     public Task StopAsync(CancellationToken cancellationToken)
     {

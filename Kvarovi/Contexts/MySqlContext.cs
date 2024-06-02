@@ -13,6 +13,8 @@ public class MySqlContext : DbContext
    public DbSet<KeywordUser> KeywordUsers { get; set; } = null!;
 
    public DbSet<Notification> Notifications { get; set; } = null!;
+   public DbSet<ApiKey> ApiKeys { get; set; } = null!;
+   
     
     public MySqlContext(DbContextOptions<MySqlContext> options): base(options)
     {
@@ -31,6 +33,8 @@ public class MySqlContext : DbContext
         new AnnouncementConfiguration().Configure(modelBuilder.Entity<Announcement>());
         new KeywordConfiguration().Configure(modelBuilder.Entity<Keyword>());
         new NotificationConfiguration().Configure(modelBuilder.Entity<Notification>());
+        modelBuilder.Entity<ApiKey>().HasKey(apk => apk.ApiKeyId);
+        modelBuilder.Entity<ApiKey>().Property(apk => apk.Value).IsRequired();
     }
     
 }

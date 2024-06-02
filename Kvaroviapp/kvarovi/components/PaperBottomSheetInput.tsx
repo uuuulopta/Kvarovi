@@ -41,7 +41,7 @@ const BottomSheetTextInputComponent = forwardRef<React.Ref<any>, BottomSheetText
 
     return (
       <TextInput
-        ref={ref as React.RefObject<TextInputHandles>}
+        ref={ref as any}
         onFocus={handleOnFocus}
         onBlur={handleOnBlur}
         {...rest}

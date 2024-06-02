@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Numerics;
 using Cyrillic.Convert;
 using HtmlAgilityPack;
+using Models;
 
 // www.bvk.rs/planirani-radovi & www.bvks.rs/kvarovi-na-mrezi
 // -----------------------------------------------------------
@@ -13,22 +14,23 @@ using HtmlAgilityPack;
 public class WaterAnnouncementGetter : AnnouncementGetter
 {
 
-    public WaterAnnouncementGetter() : base(){}
-   
-    public override async Task<Dictionary<string, List<string>>> getAnnouncements(AnnouncementUrl url)
+
+    public WaterAnnouncementGetter(ILogger logger) : base(logger){}
+
+    public override async Task<AnnouncementData> getAnnouncements(AnnouncementUrl url)
     {
      
         var html = await getPage(url);
+        if (html == null) return new AnnouncementData(new List<(string, string)>(),null); 
         var titles = html.DocumentNode.SelectNodes("//p[contains(@class, 'toggler')]");
         var texts = html.DocumentNode.SelectNodes("//div[contains(@class, 'toggle_content')]");
-        var res = new Dictionary<string, List<string>>();
+        var res = new List<(string, string)>();
         for (int i = 0; i < titles.Count; i++)
         {
-            res.Add(titles[i].InnerText.ToSerbianLatin(),
-                new List<string>{ texts[i].InnerText.ToSerbianLatin() } );
+            res.Add(( titles[i].InnerText.ToSerbianLatin(), texts[i].InnerText.ToSerbianLatin()  ));
         }
 
-        return res;
+        return new AnnouncementData(res,null); 
 
 
     }
@@ -39,11 +41,12 @@ public class WaterAnnouncementGetter : AnnouncementGetter
         var dateStr = title.Substring(0,10);
         try
         {
-            return DateTime.ParseExact(dateStr, "yyyy.MM.dd", CultureInfo.InvariantCulture);
+            return DateTime.ParseExact(dateStr, "dd.MM.yyyy", CultureInfo.InvariantCulture);
         }
         catch (Exception e)
         {
             return null;
         }
     }
+
 }
